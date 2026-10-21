@@ -36,6 +36,7 @@ sales, sale_items, payments, promotions, cash_sessions, expenses, incomes
 invoices         (sale_id, sat_uuid, status, xml_path, pdf_path)
 audit_log        (actor, action, entity, before, after, at)
 ```
+Access: every policy goes through `has_role(business_id, roles)`; role-granting writes only happen inside RPCs.
 Money is integer cents. Prices include VAT (Mexican retail norm); tax is derived per line.
 
 ## Key flows

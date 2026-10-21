@@ -29,6 +29,17 @@ jobs:
       - run: flutter analyze
       - run: flutter test
 
+  database:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.121.0
+      - run: supabase db start
+      - run: supabase test db
+
   web:
     runs-on: ubuntu-latest
     timeout-minutes: 10

@@ -15,7 +15,8 @@ Baseline: OWASP MASVS (mobile) and ASVS L1 (web/API).
 Hook setup (once per clone): `git config core.hooksPath .githooks`
 
 ## Data access
-- RLS on every table, scoped by `business_id` from `memberships`; role in JWT via custom access token hook.
+- RLS on every table, scoped by `business_id` through `public.has_role(business_id, roles)`, which reads `memberships`. Not a JWT claim: a user can belong to several businesses and role changes apply immediately.
+- Nothing that grants a role is writable directly; `create_business` and (later) invitation RPCs are the only paths.
 - pgTAP tests attempt cross-business reads/writes and must fail.
 - The UI hiding a button is never the control; the database is.
 
