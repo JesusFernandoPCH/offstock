@@ -1,0 +1,13 @@
+#!/bin/sh
+# Second gate: scans the whole history before anything leaves this machine.
+PATH="$PATH:$LOCALAPPDATA/Microsoft/WinGet/Links"
+
+if ! command -v gitleaks >/dev/null 2>&1; then
+  echo "pre-push: gitleaks not found. Push blocked." >&2
+  exit 1
+fi
+
+gitleaks git --redact --no-banner || {
+  echo "pre-push: secret found in history. Push blocked. Rewrite history and rotate the secret." >&2
+  exit 1
+}

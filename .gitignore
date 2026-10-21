@@ -1,0 +1,39 @@
+# --- Secrets: never commit (also enforced by .githooks/pre-commit) ---
+.env
+.env.*
+!.env.example
+env.json
+!env.example.json
+*.jks
+*.keystore
+key.properties
+*.pem
+*.p12
+*.key
+*.cer
+service-account*.json
+google-services.json
+GoogleService-Info.plist
+supabase/.env
+supabase/.temp/
+backups/
+
+# --- Flutter / Dart ---
+.dart_tool/
+build/
+.flutter-plugins
+.flutter-plugins-dependencies
+*.iml
+.idea/
+
+# --- Node / Next.js ---
+node_modules/
+.next/
+out/
+coverage/
+*.tsbuildinfo
+.vercel/
+
+# --- OS / editor ---
+.DS_Store
+Thumbs.db

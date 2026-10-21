@@ -1,0 +1,23 @@
+#!/bin/sh
+# Blocks commits containing secrets or secret-bearing files. Fails closed: no gitleaks, no commit.
+PATH="$PATH:$LOCALAPPDATA/Microsoft/WinGet/Links"
+
+if ! command -v gitleaks >/dev/null 2>&1; then
+  echo "pre-commit: gitleaks not found. Install it (winget install Gitleaks.Gitleaks) before committing." >&2
+  exit 1
+fi
+
+# Files that must never be tracked, even if their content looks harmless.
+blocked=$(git diff --cached --name-only --diff-filter=ACR | grep -Ei \
+  '(^|/)\.env(\..*)?$|(^|/)env\.json$|\.(jks|keystore|pem|p12|key|cer)$|(^|/)key\.properties$|service-account.*\.json$|google-services\.json$|GoogleService-Info\.plist$' \
+  | grep -Ev '\.example(\.json)?$')
+if [ -n "$blocked" ]; then
+  echo "pre-commit: blocked secret-bearing files:" >&2
+  echo "$blocked" >&2
+  exit 1
+fi
+
+gitleaks git --pre-commit --staged --redact --no-banner || {
+  echo "pre-commit: gitleaks found a possible secret. Remove it; if it was ever real, rotate it." >&2
+  exit 1
+}

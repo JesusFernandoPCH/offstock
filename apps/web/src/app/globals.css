@@ -1,0 +1,86 @@
+@import "tailwindcss";
+
+/* Mirror of design/tokens.json (color.light / color.dark). */
+:root {
+  --bg: #FAF5F2;
+  --surface: #FFFFFF;
+  --ink: #2B1630;
+  --ink-soft: #6E5A70;
+  --accent: #E4007C;
+  --accent-lip: #A3005A;
+  --accent-text: #C4006A;
+  --on-accent: #FFFFFF;
+  --hold: #F2A007;
+  --on-hold: #2B1630;
+  --ok: #1F7A55;
+  --danger: #C2311A;
+  --line: #EADFE3;
+  --shadow: #5A2A4A;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1C1220;
+    --surface: #2A1C2F;
+    --ink: #F6ECF2;
+    --ink-soft: #BFA9C2;
+    --accent: #FF4FA3;
+    --accent-lip: #B8126A;
+    --accent-text: #FF4FA3;
+    --on-accent: #1C1220;
+    --hold: #FFB835;
+    --on-hold: #1C1220;
+    --ok: #4CC38A;
+    --danger: #FF6B57;
+    --line: #3D2B42;
+    --shadow: #000000;
+    color-scheme: dark;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-accent: var(--accent);
+  --color-accent-lip: var(--accent-lip);
+  --color-accent-text: var(--accent-text);
+  --color-on-accent: var(--on-accent);
+  --color-hold: var(--hold);
+  --color-on-hold: var(--on-hold);
+  --color-ok: var(--ok);
+  --color-danger: var(--danger);
+  --color-line: var(--line);
+  --font-sans: var(--font-bricolage), system-ui, sans-serif;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+}
+
+:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+
+/* Tactile button: same lip-and-sink behavior as the mobile TactileButton. */
+.btn-tactile {
+  border-radius: 16px;
+  padding: 14px 20px;
+  min-height: 48px;
+  font-weight: 650;
+  background: var(--accent);
+  color: var(--on-accent);
+  box-shadow: 0 4px 0 var(--accent-lip);
+  transition: transform 90ms ease-out, box-shadow 90ms ease-out;
+}
+.btn-tactile:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--accent-lip);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn-tactile { transition: none; }
+}
