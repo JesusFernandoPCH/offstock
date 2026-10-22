@@ -80,9 +80,9 @@ ThemeData offstockTheme(OffstockColors c, Brightness b) => ThemeData(
       scaffoldBackgroundColor: c.bg,
       splashFactory: NoSplash.splashFactory,
       textSelectionTheme: TextSelectionThemeData(
-        cursorColor: c.accent,
-        selectionColor: c.accent.withValues(alpha: 0.25),
-        selectionHandleColor: c.accent,
+        cursorColor: c.accentText,
+        selectionColor: c.accentText.withValues(alpha: 0.25),
+        selectionHandleColor: c.accentText,
       ),
       colorScheme: ColorScheme(
         brightness: b,

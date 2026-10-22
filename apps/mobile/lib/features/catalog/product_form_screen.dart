@@ -408,7 +408,7 @@ class _Step extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: done ? c.ok : const Color(0x00000000),
                     shape: BoxShape.circle,
-                    border: done ? null : Border.all(color: c.accent, width: 2),
+                    border: done ? null : Border.all(color: c.accentText, width: 2),
                   ),
                   child: Text(
                     done ? '✓' : '$number',
@@ -462,7 +462,7 @@ class _SaveBar extends StatelessWidget {
                       value: value.clamp(0, 1),
                       minHeight: 8,
                       backgroundColor: c.line,
-                      color: done == total ? c.ok : c.accent,
+                      color: done == total ? c.ok : c.accentText,
                     ),
                   ),
                 ),
@@ -500,12 +500,12 @@ class _PhotoBox extends StatelessWidget {
           child: photo == null
               ? CustomPaint(
                   key: const ValueKey('empty'),
-                  painter: _DashedBorder(color: c.accent),
+                  painter: _DashedBorder(color: c.accentText),
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     spacing: 10,
                     children: [
-                      CustomPaint(size: const Size(56, 44), painter: _CameraGlyph(color: c.accent)),
+                      CustomPaint(size: const Size(56, 44), painter: _CameraGlyph(color: c.accentText)),
                       Text('Tomar foto', style: OffstockType.heading.copyWith(color: c.accentText)),
                     ],
                   ),
@@ -608,7 +608,7 @@ class _Chip extends StatelessWidget {
         decoration: BoxDecoration(
           color: selected ? c.accent : c.bg,
           borderRadius: BorderRadius.circular(999),
-          border: Border.all(color: selected ? c.accent : c.line, width: 1.5),
+          border: Border.all(color: selected ? c.accentLip : c.line, width: 1.5),
           boxShadow: [if (selected) BoxShadow(color: c.accentLip, offset: const Offset(0, 3))],
         ),
         child: AnimatedSize(
@@ -695,7 +695,7 @@ class _CountRowState extends State<_CountRow> {
             decoration: BoxDecoration(
               color: c.bg,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: focused ? c.accent : c.line, width: focused ? 2 : 1.5),
+              border: Border.all(color: focused ? c.accentText : c.line, width: focused ? 2 : 1.5),
             ),
             child: TextField(
               controller: widget.controller,
@@ -703,7 +703,7 @@ class _CountRowState extends State<_CountRow> {
               keyboardType: TextInputType.number,
               textAlign: TextAlign.center,
               style: OffstockType.price.copyWith(fontSize: 18, color: c.ink),
-              cursorColor: c.accent,
+              cursorColor: c.accentText,
               scrollPadding: const EdgeInsets.only(bottom: 140),
               onChanged: (_) => widget.onChanged(),
               decoration: const InputDecoration.collapsed(hintText: '0'),

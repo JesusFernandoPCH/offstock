@@ -74,9 +74,9 @@ class _OffstockFieldState extends State<OffstockField> {
             decoration: BoxDecoration(
               color: c.surface,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: focused ? c.accent : c.line, width: focused ? 2 : 1.5),
+              border: Border.all(color: focused ? c.accentText : c.line, width: focused ? 2 : 1.5),
               boxShadow: [
-                if (focused) BoxShadow(color: c.accent.withValues(alpha: 0.18), blurRadius: 16, spreadRadius: 1),
+                if (focused) BoxShadow(color: c.accentText.withValues(alpha: 0.18), blurRadius: 16, spreadRadius: 1),
               ],
             ),
             child: TextField(
@@ -85,7 +85,7 @@ class _OffstockFieldState extends State<OffstockField> {
               autofocus: widget.autofocus,
               keyboardType: widget.keyboardType,
               style: style,
-              cursorColor: c.accent,
+              cursorColor: c.accentText,
               onChanged: widget.onChanged,
               onSubmitted: widget.onSubmitted,
               // Leaves room under the field when the keyboard scrolls it into view.

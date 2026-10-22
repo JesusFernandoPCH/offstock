@@ -64,7 +64,7 @@ class _TermsScreenState extends State<TermsScreen> {
                       margin: const EdgeInsets.only(top: 8),
                       width: 8,
                       height: 8,
-                      decoration: BoxDecoration(color: c.accent, shape: BoxShape.circle),
+                      decoration: BoxDecoration(color: c.accentText, shape: BoxShape.circle),
                     ),
                     Expanded(child: Text(_points[i], style: OffstockType.body.copyWith(color: c.ink))),
                   ],
