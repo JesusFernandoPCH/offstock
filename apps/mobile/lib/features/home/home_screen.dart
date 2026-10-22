@@ -121,7 +121,7 @@ class _TabBar extends StatelessWidget {
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       decoration: BoxDecoration(
                         color: i == index
-                            ? c.accent.withValues(alpha: 0.12)
+                            ? c.accentText.withValues(alpha: 0.12)
                             : const Color(0x00000000),
                         borderRadius: BorderRadius.circular(14),
                       ),

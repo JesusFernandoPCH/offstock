@@ -110,7 +110,7 @@ class _TypeTile extends StatelessWidget {
           decoration: BoxDecoration(
             color: c.surface,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: selected ? c.accent : c.line, width: selected ? 2 : 1.5),
+            border: Border.all(color: selected ? c.accentText : c.line, width: selected ? 2 : 1.5),
             boxShadow: [BoxShadow(color: selected ? c.accentLip : c.line, offset: Offset(0, selected ? 3 : 2))],
           ),
           child: Column(

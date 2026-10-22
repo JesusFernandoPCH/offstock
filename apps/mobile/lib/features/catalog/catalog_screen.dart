@@ -93,7 +93,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
     } else {
       final visible = _visible;
       body = RefreshIndicator(
-        color: c.accent,
+        color: c.accentText,
         backgroundColor: c.surface,
         onRefresh: _reload,
         child: visible.isEmpty

@@ -6,10 +6,10 @@
   --surface: #FFFFFF;
   --ink: #2B1630;
   --ink-soft: #6E5A70;
-  --accent: #E4007C;
-  --accent-lip: #A3005A;
-  --accent-text: #C4006A;
-  --on-accent: #FFFFFF;
+  --accent: #E8D8B4;
+  --accent-lip: #B89C68;
+  --accent-text: #7D6232;
+  --on-accent: #2B1630;
   --hold: #F2A007;
   --on-hold: #2B1630;
   --ok: #1F7A55;
@@ -24,9 +24,9 @@
     --surface: #2A1C2F;
     --ink: #F6ECF2;
     --ink-soft: #BFA9C2;
-    --accent: #FF4FA3;
-    --accent-lip: #B8126A;
-    --accent-text: #FF4FA3;
+    --accent: #EADCC0;
+    --accent-lip: #A88F62;
+    --accent-text: #EADCC0;
     --on-accent: #1C1220;
     --hold: #FFB835;
     --on-hold: #1C1220;
