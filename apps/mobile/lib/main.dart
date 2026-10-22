@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'core/theme/tokens.dart';
-import 'core/widgets/gallery_screen.dart';
 import 'core/widgets/tactile_button.dart';
 import 'features/auth/biometric_lock.dart';
 import 'features/auth/lock_screens.dart';
@@ -10,6 +9,7 @@ import 'features/auth/login_screen.dart';
 import 'features/auth/secure_session_storage.dart';
 import 'features/auth/session.dart';
 import 'features/auth/terms_screen.dart';
+import 'features/home/home_screen.dart';
 import 'features/onboarding/onboarding_screen.dart';
 
 // Run with: flutter run --dart-define-from-file=../../.env
@@ -69,7 +69,7 @@ class OffstockApp extends StatelessWidget {
         Stage.offerBiometric => BiometricOfferScreen(onAnswer: s.answerBiometricOffer),
         Stage.needsTerms => TermsScreen(version: termsVersion, onAccept: s.acceptTerms),
         Stage.needsBusiness => OnboardingScreen(onCreate: s.createBusiness),
-        Stage.ready => GalleryScreen(title: s.businessName!, onSignOut: s.signOut),
+        Stage.ready => HomeScreen(session: s),
         Stage.failed => _Retry(onRetry: s.refresh),
       };
 }

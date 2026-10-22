@@ -35,10 +35,12 @@ class AppSession extends ChangeNotifier with WidgetsBindingObserver {
   Stage stage = Stage.loading;
   String? businessId;
   String? businessName;
+  String? businessType;
   String? role;
 
   bool get isDemo => db.auth.currentUser?.isAnonymous ?? false;
   bool get googleEnabled => googleWebClientId.isNotEmpty;
+  bool get isOwner => role == 'owner';
 
   Future<void> refresh() async {
     if (db.auth.currentUser == null) return _set(Stage.signedOut);
@@ -50,11 +52,13 @@ class AppSession extends ChangeNotifier with WidgetsBindingObserver {
       if (terms == null) return _set(Stage.needsTerms);
 
       // ponytail: first membership wins; add a business picker when someone actually has two.
-      final m = await db.from('memberships').select('business_id, role, businesses(name)').limit(1).maybeSingle();
+      final m = await db.from('memberships').select('business_id, role, businesses(name, type)').limit(1).maybeSingle();
       if (m == null) return _set(Stage.needsBusiness);
       businessId = m['business_id'] as String;
       role = m['role'] as String;
-      businessName = (m['businesses'] as Map)['name'] as String;
+      final business = m['businesses'] as Map;
+      businessName = business['name'] as String;
+      businessType = business['type'] as String;
 
       if (!isDemo && !await lock.asked && await lock.supported) return _set(Stage.offerBiometric);
       _set(Stage.ready);
@@ -135,7 +139,7 @@ class AppSession extends ChangeNotifier with WidgetsBindingObserver {
   }
 
   void _set(Stage next) {
-    if (next == Stage.signedOut) businessId = businessName = role = null;
+    if (next == Stage.signedOut) businessId = businessName = businessType = role = null;
     stage = next;
     notifyListeners();
   }
