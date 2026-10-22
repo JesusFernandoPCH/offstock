@@ -13,9 +13,13 @@ class LoginScreen extends StatefulWidget {
     required this.onSendCode,
     required this.onVerify,
     this.emailLogin = true,
+    this.onGoogle,
   });
 
   final bool emailLogin;
+
+  /// Null hides the button (no OAuth client configured for this build).
+  final Future<void> Function()? onGoogle;
   final Future<void> Function() onDemo;
   final Future<void> Function(String email) onSendCode;
   final Future<void> Function(String email, String code) onVerify;
@@ -87,6 +91,13 @@ class _LoginScreenState extends State<LoginScreen> {
           const SizedBox(height: 8),
           Text('Funciona Aunque Te Salgas.', style: OffstockType.heading.copyWith(color: c.ink)),
           const SizedBox(height: 40),
+          if (widget.onGoogle != null && !_codeSent) ...[
+            TactileButton(
+              label: 'Continuar con Google',
+              onPressed: _busy ? null : () => _run(widget.onGoogle!, 'No pudimos entrar con Google. Inténtalo de nuevo.'),
+            ),
+            const SizedBox(height: 24),
+          ],
           if (widget.emailLogin && !_codeSent) ...[
             OffstockField(
               label: 'Tu correo',

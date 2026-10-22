@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:offstock/core/theme/tokens.dart';
 import 'package:offstock/core/widgets/gallery_screen.dart';
 import 'package:offstock/core/widgets/tactile_button.dart';
+import 'package:offstock/features/auth/lock_screens.dart';
 import 'package:offstock/features/auth/login_screen.dart';
 import 'package:offstock/features/auth/terms_screen.dart';
 import 'package:offstock/features/onboarding/onboarding_screen.dart';
@@ -94,6 +95,44 @@ void main() {
     )));
     expect(find.byType(TextField), findsNothing);
     expect(find.text('Probar la demo'), findsOneWidget);
+  });
+
+  testWidgets('login: Google button shows only when configured', (tester) async {
+    var google = 0;
+    Widget login({Future<void> Function()? onGoogle}) => _app(LoginScreen(
+          emailLogin: false,
+          onGoogle: onGoogle,
+          onDemo: () async {},
+          onSendCode: (_) async {},
+          onVerify: (_, _) async {},
+        ));
+
+    await tester.pumpWidget(login());
+    expect(find.text('Continuar con Google'), findsNothing);
+
+    await tester.pumpWidget(login(onGoogle: () async => google++));
+    await tester.tap(find.text('Continuar con Google'));
+    await tester.pumpAndSettle();
+    expect(google, 1);
+  });
+
+  testWidgets('lock screen prompts on open and offers another account', (tester) async {
+    var prompts = 0, signOuts = 0;
+    await tester.pumpWidget(_app(LockScreen(onUnlock: () async => prompts++, onSignOut: () async => signOuts++)));
+    await tester.pump();
+    expect(prompts, 1, reason: 'biometric prompt opens without a tap');
+
+    await tester.tap(find.text('Desbloquear'));
+    await tester.tap(find.text('Entrar con otra cuenta'));
+    expect((prompts, signOuts), (2, 1));
+  });
+
+  testWidgets('biometric offer reports the answer', (tester) async {
+    final answers = <bool>[];
+    await tester.pumpWidget(_app(BiometricOfferScreen(onAnswer: (yes) async => answers.add(yes))));
+    await tester.tap(find.text('Activar huella'));
+    await tester.tap(find.text('Ahora no'));
+    expect(answers, [true, false]);
   });
 
   testWidgets('terms: accepting calls back once', (tester) async {

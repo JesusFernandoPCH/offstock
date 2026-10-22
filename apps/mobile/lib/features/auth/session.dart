@@ -1,16 +1,23 @@
 import 'dart:async';
 
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
+import 'biometric_lock.dart';
 
 /// Bump when the terms change; everyone is asked to accept again.
 const termsVersion = '2026-10-21';
 
-enum Stage { loading, signedOut, needsTerms, needsBusiness, ready, failed }
+/// How long the app may sit in the background before it asks for biometrics again.
+const relockAfter = Duration(minutes: 5);
 
-/// Where the user is in the entry flow. Every gate is decided by the database, not local flags.
-class AppSession extends ChangeNotifier {
-  AppSession(this.db) {
+enum Stage { loading, signedOut, locked, needsTerms, needsBusiness, offerBiometric, ready, failed }
+
+/// Where the user is in the entry flow. Every gate except the device lock is decided by the database.
+class AppSession extends ChangeNotifier with WidgetsBindingObserver {
+  AppSession(this.db, {required this.lock, this.googleWebClientId = ''}) {
+    WidgetsBinding.instance.addObserver(this);
     _sub = db.auth.onAuthStateChange.listen((change) {
       const relevant = {AuthChangeEvent.initialSession, AuthChangeEvent.signedIn, AuthChangeEvent.signedOut};
       if (relevant.contains(change.event)) refresh();
@@ -18,7 +25,12 @@ class AppSession extends ChangeNotifier {
   }
 
   final SupabaseClient db;
+  final BiometricLock lock;
+  final String googleWebClientId;
   late final StreamSubscription<AuthState> _sub;
+  Future<void>? _googleReady;
+  bool _unlocked = false;
+  DateTime? _backgroundSince;
 
   Stage stage = Stage.loading;
   String? businessId;
@@ -26,9 +38,12 @@ class AppSession extends ChangeNotifier {
   String? role;
 
   bool get isDemo => db.auth.currentUser?.isAnonymous ?? false;
+  bool get googleEnabled => googleWebClientId.isNotEmpty;
 
   Future<void> refresh() async {
     if (db.auth.currentUser == null) return _set(Stage.signedOut);
+    // Checked before any network call: a locked phone shows nothing, online or not.
+    if (!isDemo && !_unlocked && await lock.enabled) return _set(Stage.locked);
     try {
       await db.rpc('accept_invitations');
       final terms = await db.from('terms_acceptances').select('version').eq('version', termsVersion).maybeSingle();
@@ -40,6 +55,8 @@ class AppSession extends ChangeNotifier {
       businessId = m['business_id'] as String;
       role = m['role'] as String;
       businessName = (m['businesses'] as Map)['name'] as String;
+
+      if (!isDemo && !await lock.asked && await lock.supported) return _set(Stage.offerBiometric);
       _set(Stage.ready);
     } catch (e) {
       debugPrint('session refresh failed: $e');
@@ -49,10 +66,42 @@ class AppSession extends ChangeNotifier {
 
   Future<void> startDemo() => db.auth.signInAnonymously();
 
+  Future<void> signInWithGoogle() async {
+    final google = GoogleSignIn.instance;
+    await (_googleReady ??= google.initialize(serverClientId: googleWebClientId));
+    final GoogleSignInAccount account;
+    try {
+      account = await google.authenticate();
+    } on GoogleSignInException catch (e) {
+      if (e.code == GoogleSignInExceptionCode.canceled) return; // the user closed the sheet; not an error
+      rethrow;
+    }
+    final idToken = account.authentication.idToken;
+    if (idToken == null) throw StateError('Google returned no ID token');
+    _unlocked = true; // they just proved who they are
+    await db.auth.signInWithIdToken(provider: OAuthProvider.google, idToken: idToken);
+  }
+
   Future<void> sendCode(String email) => db.auth.signInWithOtp(email: email.trim());
 
-  Future<void> verifyCode(String email, String code) =>
-      db.auth.verifyOTP(type: OtpType.email, email: email.trim(), token: code.trim());
+  Future<void> verifyCode(String email, String code) async {
+    _unlocked = true;
+    await db.auth.verifyOTP(type: OtpType.email, email: email.trim(), token: code.trim());
+  }
+
+  Future<void> unlock() async {
+    if (await lock.authenticate()) {
+      _unlocked = true;
+      await refresh();
+    }
+  }
+
+  Future<void> answerBiometricOffer(bool wantsIt) async {
+    final ok = wantsIt && await lock.authenticate();
+    await lock.setEnabled(ok);
+    if (ok) _unlocked = true;
+    await refresh();
+  }
 
   Future<void> acceptTerms() async {
     await db.from('terms_acceptances').insert({'version': termsVersion});
@@ -64,16 +113,36 @@ class AppSession extends ChangeNotifier {
     await refresh();
   }
 
-  Future<void> signOut() => db.auth.signOut();
+  Future<void> signOut() async {
+    _unlocked = false;
+    await lock.clear();
+    if (_googleReady != null) await GoogleSignIn.instance.signOut();
+    await db.auth.signOut();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.hidden || state == AppLifecycleState.paused) {
+      _backgroundSince ??= DateTime.now();
+    } else if (state == AppLifecycleState.resumed) {
+      final since = _backgroundSince;
+      _backgroundSince = null;
+      if (since != null && DateTime.now().difference(since) >= relockAfter) {
+        _unlocked = false;
+        refresh();
+      }
+    }
+  }
 
   void _set(Stage next) {
-    if (next != Stage.ready) businessId = businessName = role = null;
+    if (next == Stage.signedOut) businessId = businessName = role = null;
     stage = next;
     notifyListeners();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _sub.cancel();
     super.dispose();
   }

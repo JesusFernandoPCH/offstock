@@ -21,7 +21,7 @@ Hook setup (once per clone): `git config core.hooksPath .githooks`
 - The UI hiding a button is never the control; the database is.
 
 ## Device
-- Session refresh token in `biometric_storage` (Keystore/Keychain key bound to biometrics); invalidated when new biometrics are enrolled.
+- Session persisted encrypted with Keystore/Keychain (`flutter_secure_storage`); biometric app lock on cold start and after 5 min in background ([ADR-0006](adr/0006-biometric-app-lock.md)).
 - Local DB encrypted (SQLCipher).
 
 ## Platform

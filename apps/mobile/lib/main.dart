@@ -4,7 +4,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'core/theme/tokens.dart';
 import 'core/widgets/gallery_screen.dart';
 import 'core/widgets/tactile_button.dart';
+import 'features/auth/biometric_lock.dart';
+import 'features/auth/lock_screens.dart';
 import 'features/auth/login_screen.dart';
+import 'features/auth/secure_session_storage.dart';
 import 'features/auth/session.dart';
 import 'features/auth/terms_screen.dart';
 import 'features/onboarding/onboarding_screen.dart';
@@ -13,14 +16,20 @@ import 'features/onboarding/onboarding_screen.dart';
 const _supabaseUrl = String.fromEnvironment('SUPABASE_URL');
 const _supabaseKey = String.fromEnvironment('SUPABASE_PUBLISHABLE_KEY');
 const _emailLogin = bool.fromEnvironment('EMAIL_LOGIN');
+const _googleWebClientId = String.fromEnvironment('GOOGLE_WEB_CLIENT_ID');
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   if (_supabaseUrl.isEmpty || _supabaseKey.isEmpty) {
     throw StateError('Missing Supabase config. Run with --dart-define-from-file=../../.env');
   }
-  await Supabase.initialize(url: _supabaseUrl, publishableKey: _supabaseKey);
-  runApp(OffstockApp(session: AppSession(Supabase.instance.client)));
+  await Supabase.initialize(
+    url: _supabaseUrl,
+    publishableKey: _supabaseKey,
+    authOptions: const FlutterAuthClientOptions(localStorage: SecureSessionStorage()),
+  );
+  final session = AppSession(Supabase.instance.client, lock: BiometricLock(), googleWebClientId: _googleWebClientId);
+  runApp(OffstockApp(session: session));
 }
 
 /// MaterialApp is plumbing only (routing, localization, a11y). Every visible component is our own.
@@ -51,10 +60,13 @@ class OffstockApp extends StatelessWidget {
         Stage.loading => const _Splash(),
         Stage.signedOut => LoginScreen(
             emailLogin: _emailLogin,
+            onGoogle: s.googleEnabled ? s.signInWithGoogle : null,
             onDemo: s.startDemo,
             onSendCode: s.sendCode,
             onVerify: s.verifyCode,
           ),
+        Stage.locked => LockScreen(onUnlock: s.unlock, onSignOut: s.signOut),
+        Stage.offerBiometric => BiometricOfferScreen(onAnswer: s.answerBiometricOffer),
         Stage.needsTerms => TermsScreen(version: termsVersion, onAccept: s.acceptTerms),
         Stage.needsBusiness => OnboardingScreen(onCreate: s.createBusiness),
         Stage.ready => GalleryScreen(title: s.businessName!, onSignOut: s.signOut),
