@@ -5,9 +5,17 @@ import '../../core/widgets/offstock_field.dart';
 import '../../core/widgets/tactile_button.dart';
 
 /// Email + 6-digit code, or a no-signup demo. Google joins here once its OAuth client exists.
+/// Email login needs an SMTP provider in the cloud project, so it is opt-in via [emailLogin].
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({super.key, required this.onDemo, required this.onSendCode, required this.onVerify});
+  const LoginScreen({
+    super.key,
+    required this.onDemo,
+    required this.onSendCode,
+    required this.onVerify,
+    this.emailLogin = true,
+  });
 
+  final bool emailLogin;
   final Future<void> Function() onDemo;
   final Future<void> Function(String email) onSendCode;
   final Future<void> Function(String email, String code) onVerify;
@@ -79,7 +87,7 @@ class _LoginScreenState extends State<LoginScreen> {
           const SizedBox(height: 8),
           Text('Funciona Aunque Te Salgas.', style: OffstockType.heading.copyWith(color: c.ink)),
           const SizedBox(height: 40),
-          if (!_codeSent) ...[
+          if (widget.emailLogin && !_codeSent) ...[
             OffstockField(
               label: 'Tu correo',
               controller: _email,
@@ -90,7 +98,7 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             const SizedBox(height: 16),
             TactileButton(label: 'Enviarme un código', onPressed: _emailOk && !_busy ? _send : null),
-          ] else ...[
+          ] else if (widget.emailLogin) ...[
             Text('Te enviamos un código de 6 dígitos a ${_email.text.trim()}.',
                 style: OffstockType.body.copyWith(color: c.inkSoft)),
             const SizedBox(height: 16),

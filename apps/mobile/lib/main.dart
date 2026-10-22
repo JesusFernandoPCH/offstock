@@ -12,6 +12,7 @@ import 'features/onboarding/onboarding_screen.dart';
 // Run with: flutter run --dart-define-from-file=../../.env
 const _supabaseUrl = String.fromEnvironment('SUPABASE_URL');
 const _supabaseKey = String.fromEnvironment('SUPABASE_PUBLISHABLE_KEY');
+const _emailLogin = bool.fromEnvironment('EMAIL_LOGIN');
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -48,7 +49,12 @@ class OffstockApp extends StatelessWidget {
 
   Widget _screenFor(AppSession s) => switch (s.stage) {
         Stage.loading => const _Splash(),
-        Stage.signedOut => LoginScreen(onDemo: s.startDemo, onSendCode: s.sendCode, onVerify: s.verifyCode),
+        Stage.signedOut => LoginScreen(
+            emailLogin: _emailLogin,
+            onDemo: s.startDemo,
+            onSendCode: s.sendCode,
+            onVerify: s.verifyCode,
+          ),
         Stage.needsTerms => TermsScreen(version: termsVersion, onAccept: s.acceptTerms),
         Stage.needsBusiness => OnboardingScreen(onCreate: s.createBusiness),
         Stage.ready => GalleryScreen(title: s.businessName!, onSignOut: s.signOut),

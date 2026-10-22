@@ -17,7 +17,7 @@ A mobile-first POS: each employee sells **from their own phone while assisting t
 
 ## Scope — v1 (in)
 1. Terms & privacy notice on first launch; account deletion (in-app + web).
-2. Sign-in with Google; biometric quick unlock; demo mode.
+2. Sign-in with Google; biometric quick unlock; demo mode. Email + code works locally; in the cloud it waits for an SMTP provider (needs a domain), behind `EMAIL_LOGIN`.
 3. Onboarding: business name, type (clothing / food counter / tech / other), logo, currency (MXN in v1). The type selects a template (clothing → sizes & colors; food → units & menu categories).
 4. Catalog: products with variants, photo, price, cost, stock, barcode, SAT keys; scan to create; printable barcode labels for items without one.
 5. Sales: camera scanning, manual search, cart with **real-time stock holds**, promotions (% / amount / NxM / wholesale), payment methods with change, returns & cancellations.

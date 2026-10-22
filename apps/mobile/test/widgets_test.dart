@@ -85,6 +85,17 @@ void main() {
     expect(find.textContaining('No pudimos abrir la demo'), findsOneWidget);
   });
 
+  testWidgets('login: email can be turned off, demo stays', (tester) async {
+    await tester.pumpWidget(_app(LoginScreen(
+      emailLogin: false,
+      onDemo: () async {},
+      onSendCode: (_) async {},
+      onVerify: (_, _) async {},
+    )));
+    expect(find.byType(TextField), findsNothing);
+    expect(find.text('Probar la demo'), findsOneWidget);
+  });
+
   testWidgets('terms: accepting calls back once', (tester) async {
     var accepted = 0;
     await tester.pumpWidget(_app(TermsScreen(version: '2026-10-21', onAccept: () async => accepted++)));
