@@ -97,10 +97,15 @@ ThemeData offstockTheme(OffstockColors c, Brightness b) => ThemeData(
       ),
     );
 
-/// Paints the app background and gives text fields the Material ancestor they require.
+/// Paints the app background, gives text fields the Material ancestor they require, and shrinks
+/// every screen above the keyboard (the Scaffold) so focused fields are never hidden.
 Widget offstockSurface(BuildContext context, Widget? child) {
   final c = OffstockColors.of(context);
-  return Material(color: c.bg, textStyle: OffstockType.body.copyWith(color: c.ink), child: child);
+  return Scaffold(
+    backgroundColor: c.bg,
+    resizeToAvoidBottomInset: true,
+    body: DefaultTextStyle(style: OffstockType.body.copyWith(color: c.ink), child: child!),
+  );
 }
 
 class _Splash extends StatelessWidget {
