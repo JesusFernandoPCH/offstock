@@ -20,6 +20,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: 0.14.4
 
 flutter:
   uses-material-design: false
@@ -27,3 +28,13 @@ flutter:
     - family: Bricolage
       fonts:
         - asset: assets/fonts/BricolageGrotesque.ttf
+
+# Generated from design/logo (run: dart run flutter_launcher_icons)
+flutter_launcher_icons:
+  image_path: ../../design/logo/offstock-logo-1024.png
+  android: true
+  ios: true
+  remove_alpha_ios: true
+  adaptive_icon_background: "#EADCC0"
+  adaptive_icon_foreground: ../../design/logo/offstock-mark-1024.png
+  min_sdk_android: 21
