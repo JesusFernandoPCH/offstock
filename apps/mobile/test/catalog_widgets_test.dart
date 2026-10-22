@@ -96,14 +96,15 @@ void main() {
 
     Future<void> type(String hint, String text) => tester.enterText(find.widgetWithText(TextField, hint), text);
 
-    await type('Playera básica cuello redondo', 'Playera básica');
-    await type('249.00', '249.50');
+    await type('Ej. Playera básica cuello redondo', 'Playera básica');
+    await type('Ej. 249', '249.50');
     await type('Opcional', '110');
     for (final chip in ['M', 'G', 'Negro', 'Blanco']) {
       await tester.tap(find.text(chip));
     }
     await tester.pump();
-    expect(find.text('Piezas en tienda por variante (4)'), findsOneWidget);
+    expect(find.textContaining('4 variantes'), findsOneWidget);
+    expect(find.text('0 de 4 pasos'), findsNothing, reason: 'name, price and sizes already count');
 
     await tester.enterText(
       find.descendant(of: find.widgetWithText(Row, 'M, Negro'), matching: find.byType(TextField)),
@@ -131,7 +132,33 @@ void main() {
     )));
     await tester.tap(find.text('Guardar producto'));
     await tester.pump();
-    expect(find.text('Escribe el nombre del producto.'), findsOneWidget);
+    expect(find.text('Escribe el nombre del producto (paso 2).'), findsOneWidget);
     expect(saves, 0);
+  });
+
+  testWidgets('first-time guide shows once and steps turn into checks', (tester) async {
+    var seen = 0;
+    _tall(tester);
+    await tester.pumpWidget(_app(ProductFormScreen(
+      template: catalogTemplates['other']!,
+      onSave: (_) async {},
+      takePhoto: () async => null,
+      showGuide: true,
+      onGuideSeen: () => seen++,
+    )));
+    expect(find.text('Tu primer producto'), findsOneWidget);
+    expect(find.text('0 de 3 pasos'), findsOneWidget);
+
+    await tester.enterText(find.widgetWithText(TextField, 'Ej. Playera básica cuello redondo'), 'Gorra');
+    await tester.enterText(find.widgetWithText(TextField, 'Ej. 249'), '299');
+    await tester.tap(find.text('+'));
+    await tester.pumpAndSettle();
+    expect(find.text('2 de 3 pasos'), findsOneWidget);
+    expect(find.text('✓'), findsNWidgets(2));
+
+    await tester.tap(find.text('Entendido'));
+    await tester.pumpAndSettle();
+    expect(find.text('Tu primer producto'), findsNothing);
+    expect(seen, 1);
   });
 }

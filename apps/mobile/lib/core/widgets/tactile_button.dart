@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 import '../theme/tokens.dart';
+import 'pressable.dart';
 
 /// Button with a physical lip that sinks on press, like a cash register key.
 class TactileButton extends StatefulWidget {
@@ -22,11 +25,30 @@ class TactileButton extends StatefulWidget {
 
 class _TactileButtonState extends State<TactileButton> {
   bool _down = false;
+  DateTime _downAt = DateTime.now();
+  Timer? _hold;
 
   bool get _enabled => widget.onPressed != null;
 
   void _press(bool down) {
-    if (_enabled && down != _down) setState(() => _down = down);
+    if (!_enabled) return;
+    _hold?.cancel();
+    if (down) {
+      _downAt = DateTime.now();
+      setState(() => _down = true);
+      return;
+    }
+    // A quick tap would flip back before the sink is visible; hold it briefly.
+    final left = minPressVisible - DateTime.now().difference(_downAt);
+    _hold = Timer(left.isNegative ? Duration.zero : left, () {
+      if (mounted) setState(() => _down = false);
+    });
+  }
+
+  @override
+  void dispose() {
+    _hold?.cancel();
+    super.dispose();
   }
 
   @override
@@ -57,7 +79,8 @@ class _TactileButtonState extends State<TactileButton> {
           child: AnimatedContainer(
             duration: Motion.press,
             curve: Curves.easeOut,
-            transform: Matrix4.translationValues(0, 4 - lift, 0),
+            transform: Matrix4.translationValues(0, 4 - lift, 0)..scaleByDouble(_down ? 0.985 : 1, _down ? 0.985 : 1, 1, 1),
+            transformAlignment: Alignment.center,
             constraints: const BoxConstraints(minHeight: 48),
             padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
             decoration: BoxDecoration(
