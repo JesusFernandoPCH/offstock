@@ -8,7 +8,10 @@ import 'tactile_button.dart';
 
 /// Phase 0 design-system playground. Replaced by the real sales flow in Phase 3.
 class GalleryScreen extends StatefulWidget {
-  const GalleryScreen({super.key});
+  const GalleryScreen({super.key, this.title = 'Venta de Ana', this.onSignOut});
+
+  final String title;
+  final VoidCallback? onSignOut;
 
   @override
   State<GalleryScreen> createState() => _GalleryScreenState();
@@ -48,8 +51,17 @@ class _GalleryScreenState extends State<GalleryScreen> {
               padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
               child: Row(
                 children: [
-                  Expanded(child: Text('Venta de Ana', style: OffstockType.title.copyWith(color: c.ink))),
-                  const StatusChip('En línea', kind: ChipKind.ok),
+                  Expanded(child: Text(widget.title, style: OffstockType.title.copyWith(color: c.ink))),
+                  if (widget.onSignOut != null)
+                    GestureDetector(
+                      onTap: widget.onSignOut,
+                      child: Padding(
+                        padding: const EdgeInsets.all(8),
+                        child: Text('Salir', style: OffstockType.label.copyWith(color: c.accentText)),
+                      ),
+                    )
+                  else
+                    const StatusChip('En línea', kind: ChipKind.ok),
                 ],
               ),
             ),
