@@ -49,9 +49,11 @@ create policy "members see coworkers" on public.memberships
 create policy "owners remove employees" on public.memberships
   for delete to authenticated using (role = 'employee' and public.has_role(business_id, '{owner}'));
 
-revoke all on public.businesses, public.memberships from anon;
-revoke insert on public.businesses, public.memberships from authenticated;
-revoke update on public.memberships from authenticated;
+-- Explicit grants: the cloud project does not auto-expose tables. No insert anywhere:
+-- rows that grant roles are only created by the RPCs below.
+revoke all on public.businesses, public.memberships from anon, authenticated;
+grant select, update on public.businesses to authenticated;
+grant select, delete on public.memberships to authenticated;
 
 create function public.create_business(p_name text, p_type public.business_type)
 returns uuid
