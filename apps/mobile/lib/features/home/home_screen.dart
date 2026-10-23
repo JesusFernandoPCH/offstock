@@ -9,6 +9,7 @@ import '../auth/session.dart';
 import '../catalog/catalog_repo.dart';
 import '../catalog/catalog_screen.dart';
 import '../catalog/product_form_screen.dart';
+import '../catalog/scanner_screen.dart';
 import '../catalog/templates.dart';
 
 /// Signed-in shell: sell (placeholder until Phase 3) and catalog.
@@ -27,7 +28,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   static const _guideKey = 'guide_product_form_seen';
 
-  Future<bool?> _addProduct() async {
+  Future<String?> _scan() => Navigator.of(context).push<String>(MaterialPageRoute(builder: (_) => const ScannerScreen()));
+
+  Future<bool?> _addProduct({String? barcode}) async {
     final prefs = await SharedPreferences.getInstance();
     if (!mounted) return null;
     return Navigator.of(context).push<bool>(
@@ -37,6 +40,8 @@ class _HomeScreenState extends State<HomeScreen> {
           showGuide: !(prefs.getBool(_guideKey) ?? false),
           onGuideSeen: () => prefs.setBool(_guideKey, true),
           onSave: _repo.create,
+          barcode: barcode,
+          scan: _scan,
           takePhoto: () async {
             // ~1080px at 70% JPEG lands around 150–300 KB, well under the 1 MB bucket limit.
             final shot = await ImagePicker().pickImage(
@@ -69,6 +74,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 CatalogScreen(
                   load: _repo.load,
                   onAdd: s.isOwner ? _addProduct : null,
+                  scan: _scan,
                 ),
               ],
             ),

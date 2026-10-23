@@ -6,6 +6,7 @@ import 'package:offstock/core/theme/tokens.dart';
 import 'package:offstock/features/catalog/catalog_repo.dart';
 import 'package:offstock/features/catalog/catalog_screen.dart';
 import 'package:offstock/features/catalog/product_form_screen.dart';
+import 'package:offstock/features/catalog/scanner_screen.dart';
 import 'package:offstock/features/catalog/templates.dart';
 import 'package:offstock/main.dart';
 
@@ -40,7 +41,7 @@ void _tall(WidgetTester tester) {
 void main() {
   testWidgets('empty catalog invites the owner to add the first product', (tester) async {
     var adds = 0;
-    await tester.pumpWidget(_app(CatalogScreen(load: () async => [], onAdd: () async => adds++ > 99)));
+    await tester.pumpWidget(_app(CatalogScreen(load: () async => [], onAdd: ({barcode}) async => adds++ > 99)));
     await tester.pumpAndSettle();
     expect(find.text('Tu catálogo está vacío.'), findsOneWidget);
     await tester.tap(find.text('Agregar producto'));
@@ -160,5 +161,85 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Tu primer producto'), findsNothing);
     expect(seen, 1);
+  });
+
+  test('only 8–14 digit retail codes are accepted', () {
+    expect(acceptBarcode(' 7501234500018 '), '7501234500018');
+    expect(acceptBarcode('12345678'), '12345678');
+    expect(acceptBarcode('1234567'), isNull);
+    expect(acceptBarcode('ABC12345678'), isNull);
+    expect(acceptBarcode(null), isNull);
+  });
+
+  testWidgets('scanning a known code filters to its product', (tester) async {
+    await tester.pumpWidget(_app(CatalogScreen(load: () async => [_shirt, _cap], scan: () async => '7501234500018')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.bySemanticsLabel('Escanear código de barras'));
+    await tester.pumpAndSettle();
+    expect(find.text('Playera básica'), findsOneWidget);
+    expect(find.text('Gorra'), findsNothing);
+  });
+
+  testWidgets('scanning an unknown code lets the owner create it with that code', (tester) async {
+    String? created;
+    await tester.pumpWidget(_app(CatalogScreen(
+      load: () async => [_cap],
+      scan: () async => '7509999999990',
+      onAdd: ({barcode}) async {
+        created = barcode;
+        return false;
+      },
+    )));
+    await tester.pumpAndSettle();
+    await tester.tap(find.bySemanticsLabel('Escanear código de barras'));
+    await tester.pumpAndSettle();
+    expect(find.text('El código 7509999999990 no está en tu catálogo.'), findsOneWidget);
+    await tester.tap(find.text('Crear producto con este código'));
+    expect(created, '7509999999990');
+  });
+
+  testWidgets('employees are told to ask the owner about unknown codes', (tester) async {
+    await tester.pumpWidget(_app(CatalogScreen(load: () async => [_cap], scan: () async => '7509999999990')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.bySemanticsLabel('Escanear código de barras'));
+    await tester.pumpAndSettle();
+    expect(find.text('Pídele al dueño del negocio que lo agregue.'), findsOneWidget);
+    expect(find.text('Crear producto con este código'), findsNothing);
+  });
+
+  testWidgets('prefilled code goes to the first variant; others scan their own, no repeats', (tester) async {
+    ProductDraft? saved;
+    var next = '7500000000017';
+    _tall(tester);
+    await tester.pumpWidget(_app(ProductFormScreen(
+      template: catalogTemplates['clothing']!,
+      onSave: (d) async => saved = d,
+      takePhoto: () async => null,
+      barcode: '7509999999990',
+      scan: () async => next,
+    )));
+    await tester.enterText(find.widgetWithText(TextField, 'Ej. Playera básica cuello redondo'), 'Playera');
+    await tester.enterText(find.widgetWithText(TextField, 'Ej. 249'), '249');
+    await tester.tap(find.text('M'));
+    await tester.tap(find.text('G'));
+    await tester.pump();
+    expect(find.text('7509999999990'), findsOneWidget);
+
+    next = '7509999999990';
+    await tester.tap(find.text('Escanear código'));
+    await tester.pump();
+    await tester.tap(find.text('Guardar producto'));
+    await tester.pump();
+    expect(find.textContaining('mismo código'), findsOneWidget);
+    expect(saved, isNull);
+
+    await tester.tap(find.text('Quitar').last);
+    await tester.pump();
+    next = '7500000000017';
+    await tester.tap(find.text('Escanear código'));
+    await tester.pump();
+    await tester.tap(find.text('Guardar producto'));
+    await tester.pumpAndSettle();
+    expect([for (final v in saved!.variants) v.barcode], ['7509999999990', '7500000000017']);
   });
 }
