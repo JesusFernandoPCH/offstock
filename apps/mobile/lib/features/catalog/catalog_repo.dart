@@ -45,8 +45,11 @@ class ProductDraft {
   final String? category;
   final Map<String, String> attrs;
   final Uint8List? photo;
-  final List<({Map<String, String> attrs, int priceCents, int? costCents, int stock})> variants;
+  final List<({Map<String, String> attrs, int priceCents, int? costCents, int stock, String? barcode})> variants;
 }
+
+/// The scanned code already belongs to another variant of this business.
+class DuplicateBarcodeException implements Exception {}
 
 class CatalogRepo {
   CatalogRepo(this.db, this.businessId);
@@ -100,16 +103,22 @@ class CatalogRepo {
   /// Product, variants, costs and initial stock commit together; the photo follows.
   /// If the photo upload fails the product still exists and can get a photo later.
   Future<void> create(ProductDraft d) async {
-    final productId = await db.rpc('create_product', params: {
-      'p_business': businessId,
-      'p_name': d.name,
-      'p_category': d.category,
-      'p_attrs': d.attrs,
-      'p_variants': [
-        for (final v in d.variants)
-          {'attrs': v.attrs, 'price_cents': v.priceCents, 'cost_cents': v.costCents, 'stock': v.stock},
-      ],
-    }) as String;
+    final String productId;
+    try {
+      productId = await db.rpc('create_product', params: {
+        'p_business': businessId,
+        'p_name': d.name,
+        'p_category': d.category,
+        'p_attrs': d.attrs,
+        'p_variants': [
+          for (final v in d.variants)
+            {'attrs': v.attrs, 'price_cents': v.priceCents, 'cost_cents': v.costCents, 'stock': v.stock, 'barcode': v.barcode},
+        ],
+      }) as String;
+    } on PostgrestException catch (e) {
+      if (e.code == '23505' && e.message.contains('barcode')) throw DuplicateBarcodeException();
+      rethrow;
+    }
 
     if (d.photo != null) {
       final path = '$businessId/$productId.jpg';

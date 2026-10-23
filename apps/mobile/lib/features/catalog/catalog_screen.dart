@@ -3,17 +3,22 @@ import 'package:flutter/material.dart';
 import '../../core/money.dart';
 import '../../core/theme/tokens.dart';
 import '../../core/widgets/offstock_field.dart';
+import '../../core/widgets/pressable.dart';
 import '../../core/widgets/status_chip.dart';
 import '../../core/widgets/tactile_button.dart';
 import 'catalog_repo.dart';
+import 'scanner_screen.dart';
 
 class CatalogScreen extends StatefulWidget {
-  const CatalogScreen({super.key, required this.load, this.onAdd});
+  const CatalogScreen({super.key, required this.load, this.onAdd, this.scan});
 
   final Future<List<CatalogItem>> Function() load;
 
-  /// Null for employees. Resolves to true when a product was created.
-  final Future<bool?> Function()? onAdd;
+  /// Null for employees. Resolves to true when a product was created; [barcode] prefills its code.
+  final Future<bool?> Function({String? barcode})? onAdd;
+
+  /// Opens the camera and resolves to a code, or null if the person backed out.
+  final Future<String?> Function()? scan;
 
   @override
   State<CatalogScreen> createState() => _CatalogScreenState();
@@ -51,8 +56,13 @@ class _CatalogScreenState extends State<CatalogScreen> {
     }
   }
 
-  Future<void> _add() async {
-    if (await widget.onAdd!() == true) await _reload();
+  Future<void> _add({String? barcode}) async {
+    if (await widget.onAdd!(barcode: barcode) == true) await _reload();
+  }
+
+  Future<void> _scan() async {
+    final code = await widget.scan!();
+    if (code != null && mounted) setState(() => _search.text = code);
   }
 
   List<CatalogItem> get _visible {
@@ -98,8 +108,20 @@ class _CatalogScreenState extends State<CatalogScreen> {
         onRefresh: _reload,
         child: visible.isEmpty
             ? ListView(children: [
-                const SizedBox(height: 48),
-                Center(child: Text('Nada coincide con tu búsqueda.', style: OffstockType.body.copyWith(color: c.inkSoft))),
+                if (acceptBarcode(_search.text) case final code?)
+                  _Message(
+                    title: 'El código $code no está en tu catálogo.',
+                    detail: widget.onAdd != null
+                        ? 'Créalo ahora y el código quedará ligado al producto.'
+                        : 'Pídele al dueño del negocio que lo agregue.',
+                    action: widget.onAdd == null
+                        ? null
+                        : TactileButton(label: 'Crear producto con este código', onPressed: () => _add(barcode: code)),
+                  )
+                else ...[
+                  const SizedBox(height: 48),
+                  Center(child: Text('Nada coincide con tu búsqueda.', style: OffstockType.body.copyWith(color: c.inkSoft))),
+                ],
               ])
             : ListView.separated(
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
@@ -128,11 +150,20 @@ class _CatalogScreenState extends State<CatalogScreen> {
           if (items?.isNotEmpty ?? false)
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-              child: OffstockField(
-                label: 'Buscar por nombre, categoría o código',
-                controller: _search,
-                hint: 'Playera, jeans, 7501…',
-                onChanged: (_) => setState(() {}),
+              child: Row(
+                spacing: 10,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Expanded(
+                    child: OffstockField(
+                      label: 'Buscar por nombre, categoría o código',
+                      controller: _search,
+                      hint: 'Playera, jeans, 7501…',
+                      onChanged: (_) => setState(() {}),
+                    ),
+                  ),
+                  if (widget.scan != null) _ScanButton(onTap: _scan),
+                ],
               ),
             ),
           Expanded(child: body),
@@ -140,6 +171,55 @@ class _CatalogScreenState extends State<CatalogScreen> {
       ),
     );
   }
+}
+
+class _ScanButton extends StatelessWidget {
+  const _ScanButton({required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final c = OffstockColors.of(context);
+    return Pressable(
+      onTap: onTap,
+      label: 'Escanear código de barras',
+      child: Container(
+        width: 56,
+        height: 56,
+        decoration: BoxDecoration(
+          color: c.accent,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [BoxShadow(color: c.accentLip, offset: const Offset(0, 3))],
+        ),
+        child: CustomPaint(painter: _BarsGlyph(color: c.onAccent)),
+      ),
+    );
+  }
+}
+
+/// Barcode glyph: uneven vertical bars, drawn so it follows the theme without an icon font.
+class _BarsGlyph extends CustomPainter {
+  const _BarsGlyph({required this.color});
+
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final p = Paint()..color = color;
+    const widths = [2.5, 1.5, 3.5, 1.5, 2.5, 1.5, 3.5, 2.0];
+    var x = size.width / 2 - 14;
+    for (final w in widths) {
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(Rect.fromLTWH(x, size.height / 2 - 10, w, 20), const Radius.circular(0.75)),
+        p,
+      );
+      x += w + 2;
+    }
+  }
+
+  @override
+  bool shouldRepaint(_BarsGlyph old) => old.color != color;
 }
 
 class _ProductRow extends StatelessWidget {

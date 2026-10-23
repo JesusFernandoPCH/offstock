@@ -21,6 +21,8 @@ class ProductFormScreen extends StatefulWidget {
     required this.takePhoto,
     this.showGuide = false,
     this.onGuideSeen,
+    this.barcode,
+    this.scan,
   });
 
   final CatalogTemplate template;
@@ -30,6 +32,12 @@ class ProductFormScreen extends StatefulWidget {
   /// First visit: explain the steps once.
   final bool showGuide;
   final VoidCallback? onGuideSeen;
+
+  /// Code scanned in the catalog that started this product; it goes to the first variant.
+  final String? barcode;
+
+  /// Opens the camera and resolves to a code, or null if the person backed out.
+  final Future<String?> Function()? scan;
 
   @override
   State<ProductFormScreen> createState() => _ProductFormScreenState();
@@ -44,6 +52,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
   late final _options = {for (final a in widget.template.axes) a.key: [...a.options]};
   late final _chosen = {for (final a in widget.template.axes) a.key: <String>[]};
   final _stock = <String, TextEditingController>{};
+  final _codes = <String, String>{}; // '' = cleared on purpose
   late bool _guide = widget.showGuide;
   Uint8List? _photo;
   bool _busy = false;
@@ -58,6 +67,15 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
 
   TextEditingController _stockFor(Map<String, String> attrs) =>
       _stock.putIfAbsent(jsonEncode(attrs), () => TextEditingController(text: '0'));
+
+  /// The prefilled code follows whichever variant is first, until someone sets that one by hand.
+  String? _codeAt(int i, Map<String, String> v) =>
+      switch (_codes[jsonEncode(v)] ?? (i == 0 ? widget.barcode : null)) { '' => null, final c => c };
+
+  Future<void> _scanFor(Map<String, String> v) async {
+    final code = await widget.scan!();
+    if (code != null && mounted) setState(() => _codes[jsonEncode(v)] = code);
+  }
 
   int? _parseStock(Map<String, String> v) => switch (_stockFor(v).text.trim()) { '' => 0, final t => int.tryParse(t) };
 
@@ -106,6 +124,8 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     final cost = _cost.text.trim().isEmpty ? null : parsePesos(_cost.text);
     final variants = _variants;
     final stocks = [for (final v in variants) _parseStock(v)];
+    final codes = [for (var i = 0; i < variants.length; i++) _codeAt(i, variants[i])];
+    final scanned = codes.nonNulls.toList();
 
     String? problem;
     if (name.isEmpty) {
@@ -116,6 +136,8 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
       problem = 'El costo no es válido. Déjalo vacío si no lo sabes.';
     } else if (stocks.any((s) => s == null || s < 0)) {
       problem = 'Las piezas deben ser números enteros, sin negativos.';
+    } else if (scanned.toSet().length != scanned.length) {
+      problem = 'Dos variantes tienen el mismo código de barras. Cada una necesita el suyo.';
     }
     if (problem != null) return setState(() => _error = problem);
 
@@ -131,7 +153,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
         photo: _photo,
         variants: [
           for (var i = 0; i < variants.length; i++)
-            (attrs: variants[i], priceCents: price!, costCents: cost, stock: stocks[i]!),
+            (attrs: variants[i], priceCents: price!, costCents: cost, stock: stocks[i]!, barcode: codes[i]),
         ],
       ));
       if (mounted) Navigator.of(context).pop(true);
@@ -140,7 +162,9 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
       if (mounted) {
         setState(() {
           _busy = false;
-          _error = 'No pudimos guardar el producto. Revisa tu conexión e inténtalo de nuevo.';
+          _error = e is DuplicateBarcodeException
+              ? 'Ese código de barras ya es de otro producto de tu catálogo.'
+              : 'No pudimos guardar el producto. Revisa tu conexión e inténtalo de nuevo.';
         });
       }
     }
@@ -302,11 +326,14 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                     done: _piecesDone,
                     child: Column(
                       children: [
-                        for (final v in variants)
+                        for (final (i, v) in variants.indexed)
                           _CountRow(
                             label: v.isEmpty ? 'Todas' : variantLabel(v),
                             controller: _stockFor(v),
                             onChanged: () => setState(() {}),
+                            code: _codeAt(i, v),
+                            onScan: widget.scan == null || _busy ? null : () => _scanFor(v),
+                            onClearCode: () => setState(() => _codes[jsonEncode(v)] = ''),
                           ),
                       ],
                     ),
@@ -626,11 +653,20 @@ class _Chip extends StatelessWidget {
 /// Variant label with a − / number / + counter. The number stays editable for big counts;
 /// tapping it selects the whole value so typing replaces the 0 instead of appending to it.
 class _CountRow extends StatefulWidget {
-  const _CountRow({required this.label, required this.controller, required this.onChanged});
+  const _CountRow({
+    required this.label,
+    required this.controller,
+    required this.onChanged,
+    this.code,
+    this.onScan,
+    this.onClearCode,
+  });
 
   final String label;
   final TextEditingController controller;
   final VoidCallback onChanged;
+  final String? code;
+  final VoidCallback? onScan, onClearCode;
 
   @override
   State<_CountRow> createState() => _CountRowState();
@@ -681,12 +717,38 @@ class _CountRowState extends State<_CountRow> {
           ),
         );
 
+    Widget link(String text, VoidCallback? onTap, String semantic) => Pressable(
+          onTap: onTap,
+          label: semantic,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: Text(text, style: OffstockType.label.copyWith(fontSize: 13, color: c.accentText)),
+          ),
+        );
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
         spacing: 8,
         children: [
-          Expanded(child: Text(widget.label, style: OffstockType.body.copyWith(color: c.ink))),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(widget.label, style: OffstockType.body.copyWith(color: c.ink)),
+                if (widget.code != null)
+                  Row(
+                    spacing: 10,
+                    children: [
+                      Flexible(child: Text(widget.code!, style: OffstockType.caption.copyWith(color: c.inkSoft))),
+                      link('Quitar', widget.onClearCode, 'Quitar el código de ${widget.label}'),
+                    ],
+                  )
+                else if (widget.onScan != null)
+                  link('Escanear código', widget.onScan, 'Escanear el código de barras de ${widget.label}'),
+              ],
+            ),
+          ),
           round('−', -1, 'Quitar una pieza de ${widget.label}'),
           AnimatedContainer(
             duration: Motion.fast,
