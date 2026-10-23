@@ -10,7 +10,7 @@ import 'catalog_repo.dart';
 import 'scanner_screen.dart';
 
 class CatalogScreen extends StatefulWidget {
-  const CatalogScreen({super.key, required this.load, this.onAdd, this.scan});
+  const CatalogScreen({super.key, required this.load, this.onAdd, this.scan, this.onLabels});
 
   final Future<List<CatalogItem>> Function() load;
 
@@ -19,6 +19,9 @@ class CatalogScreen extends StatefulWidget {
 
   /// Opens the camera and resolves to a code, or null if the person backed out.
   final Future<String?> Function()? scan;
+
+  /// Opens the label sheet for a product.
+  final void Function(CatalogItem item)? onLabels;
 
   @override
   State<CatalogScreen> createState() => _CatalogScreenState();
@@ -91,7 +94,9 @@ class _CatalogScreenState extends State<CatalogScreen> {
         action: TactileButton(label: 'Reintentar', onPressed: _reload),
       );
     } else if (items == null) {
-      body = Center(child: Text('Cargando catálogo…', style: OffstockType.body.copyWith(color: c.inkSoft)));
+      body = Center(
+        child: Text('Cargando catálogo…', style: OffstockType.body.copyWith(color: c.inkSoft)),
+      );
     } else if (items.isEmpty) {
       body = widget.onAdd != null
           ? _Message(
@@ -107,27 +112,40 @@ class _CatalogScreenState extends State<CatalogScreen> {
         backgroundColor: c.surface,
         onRefresh: _reload,
         child: visible.isEmpty
-            ? ListView(children: [
-                if (acceptBarcode(_search.text) case final code?)
-                  _Message(
-                    title: 'El código $code no está en tu catálogo.',
-                    detail: widget.onAdd != null
-                        ? 'Créalo ahora y el código quedará ligado al producto.'
-                        : 'Pídele al dueño del negocio que lo agregue.',
-                    action: widget.onAdd == null
-                        ? null
-                        : TactileButton(label: 'Crear producto con este código', onPressed: () => _add(barcode: code)),
-                  )
-                else ...[
-                  const SizedBox(height: 48),
-                  Center(child: Text('Nada coincide con tu búsqueda.', style: OffstockType.body.copyWith(color: c.inkSoft))),
+            ? ListView(
+                children: [
+                  if (acceptBarcode(_search.text) case final code?)
+                    _Message(
+                      title: 'El código $code no está en tu catálogo.',
+                      detail: widget.onAdd != null
+                          ? 'Créalo ahora y el código quedará ligado al producto.'
+                          : 'Pídele al dueño del negocio que lo agregue.',
+                      action: widget.onAdd == null
+                          ? null
+                          : TactileButton(
+                              label: 'Crear producto con este código',
+                              onPressed: () => _add(barcode: code),
+                            ),
+                    )
+                  else ...[
+                    const SizedBox(height: 48),
+                    Center(
+                      child: Text(
+                        'Nada coincide con tu búsqueda.',
+                        style: OffstockType.body.copyWith(color: c.inkSoft),
+                      ),
+                    ),
+                  ],
                 ],
-              ])
+              )
             : ListView.separated(
                 padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
                 itemCount: visible.length,
                 separatorBuilder: (_, _) => const SizedBox(height: 10),
-                itemBuilder: (_, i) => _ProductRow(item: visible[i]),
+                itemBuilder: (_, i) => _ProductRow(
+                  item: visible[i],
+                  onTap: widget.onLabels == null ? null : () => widget.onLabels!(visible[i]),
+                ),
               ),
       );
     }
@@ -141,7 +159,9 @@ class _CatalogScreenState extends State<CatalogScreen> {
             padding: const EdgeInsets.fromLTRB(20, 20, 16, 12),
             child: Row(
               children: [
-                Expanded(child: Text('Catálogo', style: OffstockType.title.copyWith(color: c.ink))),
+                Expanded(
+                  child: Text('Catálogo', style: OffstockType.title.copyWith(color: c.ink)),
+                ),
                 if (widget.onAdd != null && (items?.isNotEmpty ?? false))
                   TactileButton(label: 'Agregar', onPressed: _add),
               ],
@@ -223,9 +243,10 @@ class _BarsGlyph extends CustomPainter {
 }
 
 class _ProductRow extends StatelessWidget {
-  const _ProductRow({required this.item});
+  const _ProductRow({required this.item, this.onTap});
 
   final CatalogItem item;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -237,44 +258,50 @@ class _ProductRow extends StatelessWidget {
       if (item.variants.length > 1) '${item.variants.length} variantes',
     ].join(', ');
 
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: c.surface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: c.line),
-      ),
-      child: Row(
-        spacing: 12,
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: SizedBox.square(
-              dimension: 64,
-              child: item.photoUrl == null
-                  ? _Placeholder(name: item.name)
-                  : Image.network(
-                      item.photoUrl!,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, _, _) => _Placeholder(name: item.name),
-                    ),
+    return Pressable(
+      onTap: onTap,
+      scale: 0.97,
+      label: 'Etiquetas de ${item.name}',
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: c.surface,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: c.line),
+        ),
+        child: Row(
+          spacing: 12,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: SizedBox.square(
+                dimension: 64,
+                child: item.photoUrl == null
+                    ? _Placeholder(name: item.name)
+                    : Image.network(
+                        item.photoUrl!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) => _Placeholder(name: item.name),
+                      ),
+              ),
             ),
-          ),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: 2,
-              children: [
-                Text(item.name, style: OffstockType.label.copyWith(fontSize: 16, color: c.ink)),
-                if (detail.isNotEmpty) Text(detail, style: OffstockType.label.copyWith(fontSize: 13, color: c.inkSoft)),
-                Text(price, style: OffstockType.price.copyWith(color: c.ink)),
-              ],
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                spacing: 2,
+                children: [
+                  Text(item.name, style: OffstockType.label.copyWith(fontSize: 16, color: c.ink)),
+                  if (detail.isNotEmpty)
+                    Text(detail, style: OffstockType.label.copyWith(fontSize: 13, color: c.inkSoft)),
+                  Text(price, style: OffstockType.price.copyWith(color: c.ink)),
+                ],
+              ),
             ),
-          ),
-          item.stock > 0
-              ? StatusChip('${item.stock} en tienda', kind: ChipKind.ok)
-              : const StatusChip('Agotado', kind: ChipKind.danger),
-        ],
+            item.stock > 0
+                ? StatusChip('${item.stock} en tienda', kind: ChipKind.ok)
+                : const StatusChip('Agotado', kind: ChipKind.danger),
+          ],
+        ),
       ),
     );
   }

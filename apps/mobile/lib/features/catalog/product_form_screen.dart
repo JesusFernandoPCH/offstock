@@ -327,7 +327,7 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                     child: Column(
                       children: [
                         for (final (i, v) in variants.indexed)
-                          _CountRow(
+                          CountRow(
                             label: v.isEmpty ? 'Todas' : variantLabel(v),
                             controller: _stockFor(v),
                             onChanged: () => setState(() {}),
@@ -652,8 +652,9 @@ class _Chip extends StatelessWidget {
 
 /// Variant label with a − / number / + counter. The number stays editable for big counts;
 /// tapping it selects the whole value so typing replaces the 0 instead of appending to it.
-class _CountRow extends StatefulWidget {
-  const _CountRow({
+class CountRow extends StatefulWidget {
+  const CountRow({
+    super.key,
     required this.label,
     required this.controller,
     required this.onChanged,
@@ -669,10 +670,10 @@ class _CountRow extends StatefulWidget {
   final VoidCallback? onScan, onClearCode;
 
   @override
-  State<_CountRow> createState() => _CountRowState();
+  State<CountRow> createState() => _CountRowState();
 }
 
-class _CountRowState extends State<_CountRow> {
+class _CountRowState extends State<CountRow> {
   final _focus = FocusNode();
 
   @override
@@ -741,7 +742,7 @@ class _CountRowState extends State<_CountRow> {
                     spacing: 10,
                     children: [
                       Flexible(child: Text(widget.code!, style: OffstockType.caption.copyWith(color: c.inkSoft))),
-                      link('Quitar', widget.onClearCode, 'Quitar el código de ${widget.label}'),
+                      if (widget.onClearCode != null) link('Quitar', widget.onClearCode, 'Quitar el código de ${widget.label}'),
                     ],
                   )
                 else if (widget.onScan != null)

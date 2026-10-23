@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:pdf/pdf.dart';
+import 'package:printing/printing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/theme/tokens.dart';
@@ -8,6 +10,7 @@ import '../../core/widgets/gallery_screen.dart';
 import '../auth/session.dart';
 import '../catalog/catalog_repo.dart';
 import '../catalog/catalog_screen.dart';
+import '../catalog/labels_screen.dart';
 import '../catalog/product_form_screen.dart';
 import '../catalog/scanner_screen.dart';
 import '../catalog/templates.dart';
@@ -28,7 +31,22 @@ class _HomeScreenState extends State<HomeScreen> {
 
   static const _guideKey = 'guide_product_form_seen';
 
-  Future<String?> _scan() => Navigator.of(context).push<String>(MaterialPageRoute(builder: (_) => const ScannerScreen()));
+  Future<String?> _scan() =>
+      Navigator.of(context).push<String>(MaterialPageRoute(builder: (_) => const ScannerScreen()));
+
+  void _labels(CatalogItem item) => Navigator.of(context).push(
+    MaterialPageRoute<void>(
+      builder: (_) => LabelsScreen(
+        item: item,
+        output: (pdf, {required share}) async {
+          const name = 'etiquetas-offstock.pdf';
+          share
+              ? await Printing.sharePdf(bytes: pdf, filename: name)
+              : await Printing.layoutPdf(onLayout: (_) => pdf, name: name, format: PdfPageFormat.letter);
+        },
+      ),
+    ),
+  );
 
   Future<bool?> _addProduct({String? barcode}) async {
     final prefs = await SharedPreferences.getInstance();
@@ -71,31 +89,19 @@ class _HomeScreenState extends State<HomeScreen> {
               index: _tab,
               children: [
                 GalleryScreen(title: s.businessName!, onSignOut: s.signOut),
-                CatalogScreen(
-                  load: _repo.load,
-                  onAdd: s.isOwner ? _addProduct : null,
-                  scan: _scan,
-                ),
+                CatalogScreen(load: _repo.load, onAdd: s.isOwner ? _addProduct : null, scan: _scan, onLabels: _labels),
               ],
             ),
           ),
         ),
-        _TabBar(
-          index: _tab,
-          labels: const ['Vender', 'Catálogo'],
-          onSelect: (i) => setState(() => _tab = i),
-        ),
+        _TabBar(index: _tab, labels: const ['Vender', 'Catálogo'], onSelect: (i) => setState(() => _tab = i)),
       ],
     );
   }
 }
 
 class _TabBar extends StatelessWidget {
-  const _TabBar({
-    required this.index,
-    required this.labels,
-    required this.onSelect,
-  });
+  const _TabBar({required this.index, required this.labels, required this.onSelect});
 
   final int index;
   final List<String> labels;
@@ -126,18 +132,13 @@ class _TabBar extends StatelessWidget {
                       duration: Motion.fast,
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       decoration: BoxDecoration(
-                        color: i == index
-                            ? c.accentText.withValues(alpha: 0.12)
-                            : const Color(0x00000000),
+                        color: i == index ? c.accentText.withValues(alpha: 0.12) : const Color(0x00000000),
                         borderRadius: BorderRadius.circular(14),
                       ),
                       alignment: Alignment.center,
                       child: Text(
                         labels[i],
-                        style: OffstockType.label.copyWith(
-                          fontSize: 15,
-                          color: i == index ? c.accentText : c.inkSoft,
-                        ),
+                        style: OffstockType.label.copyWith(fontSize: 15, color: i == index ? c.accentText : c.inkSoft),
                       ),
                     ),
                   ),
